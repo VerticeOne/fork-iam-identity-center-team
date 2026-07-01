@@ -4,6 +4,7 @@
 # Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 from botocore.exceptions import ClientError
 import boto3
+from datetime import datetime
 from operator import itemgetter
 
 def get_identiy_store_id():
@@ -16,7 +17,7 @@ def get_identiy_store_id():
 
 
 sso_instance = get_identiy_store_id()
-        
+
 def list_idc_users(IdentityStoreId):
     try:
         client = boto3.client('identitystore')
@@ -24,7 +25,11 @@ def list_idc_users(IdentityStoreId):
         paginator = p.paginate(IdentityStoreId=IdentityStoreId)
         all_users = []
         for page in paginator:
-            all_users.extend(page["Users"])
+            for user in page["Users"]:
+                for key, value in user.items():
+                    if isinstance(value, datetime):
+                        user[key] = value.isoformat()
+                all_users.append(user)
         return sorted(all_users, key=itemgetter('UserName'))
     except ClientError as e:
         print(e.response['Error']['Message'])

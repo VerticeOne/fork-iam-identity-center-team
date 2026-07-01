@@ -4,6 +4,7 @@
 # Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 from botocore.exceptions import ClientError
 import boto3
+from datetime import datetime
 from operator import itemgetter
 
 def get_identiy_store_id():
@@ -25,7 +26,11 @@ def list_idc_groups(IdentityStoreId):
         paginator = p.paginate(IdentityStoreId=IdentityStoreId)
         all_groups = []
         for page in paginator:
-            all_groups.extend(page["Groups"])
+            for group in page["Groups"]:
+                for key, value in group.items():
+                    if isinstance(value, datetime):
+                        group[key] = value.isoformat()
+                all_groups.append(group)
         return sorted(all_groups, key=itemgetter('DisplayName'))
     except ClientError as e:
         print(e.response['Error']['Message'])
