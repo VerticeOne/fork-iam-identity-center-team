@@ -30,7 +30,7 @@ import { createTeamDeleteApproverGroups } from './functions/teamDeleteApproverGr
 import { createTeamDeletePolicies } from './functions/teamDeletePolicies/resource';
 
 // Shared configuration
-import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled } from './config';
+import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled, appSyncWafArn } from './config';
 
 // Aspects
 import { S3BucketVersioning } from './aspects/s3Versioning';
@@ -182,7 +182,6 @@ if (dynamoDbPitrEnabled) {
 }
 
 // WAF protection for AppSync GraphQL API (ARN passed from Terraform via env var)
-const appSyncWafArn = process.env.APPSYNC_WAF_WEB_ACL_ARN;
 if (appSyncWafArn) {
     new wafv2.CfnWebACLAssociation(dataStack, 'AppSyncWafAssociation', {
         resourceArn: backend.data.resources.cfnResources.cfnGraphqlApi.attrArn,

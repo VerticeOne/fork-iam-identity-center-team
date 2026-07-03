@@ -26,3 +26,6 @@ export const prewarmIntervalDays = parseInt(process.env.PREWARM_INTERVAL_DAYS ??
 // Compliance settings (default enabled)
 export const s3VersioningEnabled = (process.env.S3_VERSIONING_ENABLED ?? 'true') === 'true';
 export const dynamoDbPitrEnabled = (process.env.DYNAMODB_PITR_ENABLED ?? 'true') === 'true';
+
+// WAF ARN for AppSync (optional, passed from Terraform)
+export const appSyncWafArn = process.env.APPSYNC_WAF_WEB_ACL_ARN;
