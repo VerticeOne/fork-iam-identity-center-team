@@ -22,3 +22,7 @@ export const cacheTtl = parseInt(process.env.CACHE_TTL ?? '604800', 10);
 
 // Pre-warm interval in days (default 1 day for testing, use 6 for production)
 export const prewarmIntervalDays = parseInt(process.env.PREWARM_INTERVAL_DAYS ?? '1', 10);
+
+// Compliance settings (default enabled)
+export const s3VersioningEnabled = (process.env.S3_VERSIONING_ENABLED ?? 'true') === 'true';
+export const dynamoDbPitrEnabled = (process.env.DYNAMODB_PITR_ENABLED ?? 'true') === 'true';
