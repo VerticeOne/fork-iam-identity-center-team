@@ -1,7 +1,8 @@
 import { defineBackend } from '@aws-amplify/backend';
-import { Tags, CfnOutput } from 'aws-cdk-lib';
+import { Aspects, Tags, CfnOutput } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 
 // Amplify Gen 2 resources
 import { data } from './data/resource';
@@ -29,7 +30,10 @@ import { createTeamDeleteApproverGroups } from './functions/teamDeleteApproverGr
 import { createTeamDeletePolicies } from './functions/teamDeletePolicies/resource';
 
 // Shared configuration
-import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays } from './config';
+import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled, appSyncWafArn } from './config';
+
+// Aspects
+import { S3BucketVersioning } from './aspects/s3Versioning';
 
 // Define backend with Amplify Gen 2 resources
 const backend = defineBackend({
@@ -164,6 +168,26 @@ authResource.applyEscapeHatches(backend);
 teamStatusResource.applyEscapeHatches(backend);
 teamgetLogsResource.applyEscapeHatches(backend, eventDataStoreArn);
 teamqueryLogsResource.applyEscapeHatches(backend, eventDataStoreArn);
+
+// Compliance: enable versioning on S3 buckets (configurable via S3_VERSIONING_ENABLED)
+if (s3VersioningEnabled) {
+    Aspects.of(dataStack).add(new S3BucketVersioning());
+}
+
+// Compliance: enable PITR on all DynamoDB tables (configurable via DYNAMODB_PITR_ENABLED)
+if (dynamoDbPitrEnabled) {
+    Object.values(backend.data.resources.cfnResources.amplifyDynamoDbTables).forEach(table => {
+        table.pointInTimeRecoveryEnabled = true;
+    });
+}
+
+// WAF protection for AppSync GraphQL API (ARN passed from Terraform via env var)
+if (appSyncWafArn) {
+    new wafv2.CfnWebACLAssociation(dataStack, 'AppSyncWafAssociation', {
+        resourceArn: backend.data.resources.cfnResources.cfnGraphqlApi.attrArn,
+        webAclArn: appSyncWafArn,
+    });
+}
 
 // Tag all resources
 Tags.of(backend.stack).add('Application', 'TEAM-IDC');
