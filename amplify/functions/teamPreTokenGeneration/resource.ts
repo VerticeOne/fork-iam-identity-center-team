@@ -21,7 +21,7 @@ export function createTeamPreTokenGeneration(props: TeamPreTokenGenerationProps)
 
     const fn = new lambda.Function(stack, 'TeamPreTokenGeneration', {
         functionName: `teamPreTokenGeneration-${appIdLower}-${env}`,
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_14,
         architecture: lambda.Architecture.ARM_64,
         handler: 'index.handler',
         code: lambda.Code.fromAsset(path.join(__dirname)),

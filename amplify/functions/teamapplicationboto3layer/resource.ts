@@ -21,14 +21,12 @@ export function createSharedPythonLayer(props: SharedPythonLayerProps): lambda.L
         layerVersionName: `sharedPythonLayer-${appIdLower}-${env}`,
         description: 'Shared Python layer with requests and requests-aws-sign',
         compatibleRuntimes: [
-            lambda.Runtime.PYTHON_3_10,
-            lambda.Runtime.PYTHON_3_11,
-            lambda.Runtime.PYTHON_3_12,
+            lambda.Runtime.PYTHON_3_14,
         ],
         compatibleArchitectures: [lambda.Architecture.ARM_64],
         code: lambda.Code.fromAsset(path.join(__dirname, 'lib/python'), {
             bundling: {
-                image: DockerImage.fromRegistry('public.ecr.aws/sam/build-python3.10:latest-arm64'),
+                image: DockerImage.fromRegistry('public.ecr.aws/sam/build-python3.14:latest-arm64'),
                 command: [
                     'bash', '-c',
                     'pip install -r requirements.txt -t /asset-output/python && cp *.py /asset-output/python/ 2>/dev/null || true',

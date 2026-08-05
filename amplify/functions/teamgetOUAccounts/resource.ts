@@ -22,7 +22,7 @@ export function createTeamgetOUAccounts(props: TeamgetOUAccountsProps): lambda.F
 
     const fn = new lambda.Function(stack, 'TeamgetOUAccounts', {
         functionName: `teamgetOUAccounts-${appIdLower}-${env}`,
-        runtime: lambda.Runtime.PYTHON_3_12,
+        runtime: lambda.Runtime.PYTHON_3_14,
         architecture: lambda.Architecture.ARM_64,
         handler: 'index.handler',
         code: lambda.Code.fromAsset(path.join(__dirname)),
