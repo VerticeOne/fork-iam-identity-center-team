@@ -21,12 +21,12 @@ export function createTeamNotifications(props: TeamNotificationsProps): lambda.F
 
     const fn = new lambda.Function(stack, 'TeamNotifications', {
         functionName: `teamNotifications-${appIdLower}-${env}`,
-        runtime: lambda.Runtime.PYTHON_3_10,
+        runtime: lambda.Runtime.PYTHON_3_14,
         architecture: lambda.Architecture.ARM_64,
         handler: 'index.lambda_handler',
         code: lambda.Code.fromAsset(path.join(__dirname), {
             bundling: {
-                image: DockerImage.fromRegistry('public.ecr.aws/sam/build-python3.10:latest-arm64'),
+                image: DockerImage.fromRegistry('public.ecr.aws/sam/build-python3.14:latest-arm64'),
                 command: [
                     'bash', '-c',
                     'pip install -r requirements.txt -t /asset-output && cp -r . /asset-output/',

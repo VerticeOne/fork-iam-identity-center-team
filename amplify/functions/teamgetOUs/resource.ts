@@ -18,7 +18,7 @@ export function createTeamgetOUs(props: TeamgetOUsProps): lambda.Function {
 
     const fn = new lambda.Function(stack, 'TeamgetOUs', {
         functionName: `teamgetOUs-${appIdLower}-${env}`,
-        runtime: lambda.Runtime.PYTHON_3_10,
+        runtime: lambda.Runtime.PYTHON_3_14,
         architecture: lambda.Architecture.ARM_64,
         handler: 'index.handler',
         code: lambda.Code.fromAsset(path.join(__dirname)),

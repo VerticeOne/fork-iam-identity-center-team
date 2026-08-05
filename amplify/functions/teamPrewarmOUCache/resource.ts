@@ -27,7 +27,7 @@ export function createTeamPrewarmOUCache(props: TeamPrewarmOUCacheProps): lambda
 
     const fn = new lambda.Function(stack, 'TeamPrewarmOUCache', {
         functionName: `teamPrewarmOUCache-${appIdLower}-${env}`,
-        runtime: lambda.Runtime.PYTHON_3_12,
+        runtime: lambda.Runtime.PYTHON_3_14,
         architecture: lambda.Architecture.ARM_64,
         handler: 'index.handler',
         code: lambda.Code.fromAsset(path.join(__dirname)),

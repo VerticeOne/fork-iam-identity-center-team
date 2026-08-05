@@ -27,7 +27,7 @@ export function createTeamgetEntitlement(props: TeamgetEntitlementProps): lambda
 
     const fn = new lambda.Function(stack, 'TeamgetEntitlement', {
         functionName: `teamgetEntitlement-${appIdLower}-${env}`,
-        runtime: lambda.Runtime.PYTHON_3_10,
+        runtime: lambda.Runtime.PYTHON_3_14,
         architecture: lambda.Architecture.ARM_64,
         handler: 'index.handler',
         code: lambda.Code.fromAsset(path.join(__dirname)),
