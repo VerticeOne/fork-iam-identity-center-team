@@ -223,42 +223,18 @@ export async function sessions(filter) {
   }
 }
 
-export async function getPendingApprovals(user) {
-  let nextToken = null;
+export async function getRequestsByStatus(status, filter) {
+  const statuses = Array.isArray(status) ? status : [status];
   let data = [];
   try {
-    do {
-      const request = await client.graphql({
-        query: requestByStatus,
-        variables: {
-          status: "pending",
-          filter: { and: [{ email: { ne: user } }, { approvers: { contains: user } }] },
-          nextToken
-        }
-      });
-      data = data.concat(request.data.requestByStatus.items);
-      nextToken = request.data.requestByStatus.nextToken;
-    } while (nextToken);
-    return data;
-  } catch (err) {
-    console.log("error fetching pending approvals");
-    return { error: err };
-  }
-}
-
-export async function getActiveSessions(user) {
-  let data = [];
-  // Query scheduled and in-progress sessions separately via GSI and merge
-  const userFilter = user
-    ? { or: [{ email: { eq: user } }, { approvers: { contains: user } }] }
-    : undefined;
-  try {
-    for (const status of ["scheduled", "in progress"]) {
+    for (const s of statuses) {
       let nextToken = null;
       do {
+        const variables = { status: s, nextToken };
+        if (filter) variables.filter = filter;
         const request = await client.graphql({
           query: requestByStatus,
-          variables: { status, filter: userFilter, nextToken }
+          variables
         });
         data = data.concat(request.data.requestByStatus.items);
         nextToken = request.data.requestByStatus.nextToken;
@@ -266,9 +242,21 @@ export async function getActiveSessions(user) {
     }
     return data;
   } catch (err) {
-    console.log("error fetching active sessions");
+    console.log("error fetching requests by status", err);
     return { error: err };
   }
+}
+
+export async function getPendingApprovals(user) {
+  return getRequestsByStatus("pending", {
+    and: [{ email: { ne: user } }, { approvers: { contains: user } }],
+  });
+}
+
+export async function getActiveSessions(user) {
+  return getRequestsByStatus(["scheduled", "in progress"], {
+    or: [{ email: { eq: user } }, { approvers: { contains: user } }],
+  });
 }
 
 export async function fetchLogs(args) {
