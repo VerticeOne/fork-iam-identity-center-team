@@ -706,7 +706,7 @@ function Request(props) {
                     const permNames = (policy.permissions || []).slice(0, 5).map(p => p.name).join(", ") || "None";
                     const moreAccounts = (policy.accounts?.length || 0) > 5 ? ` +${policy.accounts.length - 5} more` : "";
                     const morePerms = (policy.permissions?.length || 0) > 5 ? ` +${policy.permissions.length - 5} more` : "";
-                    const autoApprove = policyData?.approvalRequired === false ? "✓" : "✗";
+                    const autoApprove = policyData?.approvalRequired === false ? "True" : "False";
                     const approvalStatus = `Auto-approve: ${autoApprove}`;
 
                     return {
@@ -724,9 +724,9 @@ function Request(props) {
             {eligibilityType === EligibilityMode.POLICY_BASED && selectedPolicy && (
               <FormField label="Auto-approve" stretch>
                 {policyMap[selectedPolicy.value]?.approvalRequired === false ? (
-                  <StatusIndicator type="success">✓</StatusIndicator>
+                  <StatusIndicator type="success">Yes</StatusIndicator>
                 ) : (
-                  <StatusIndicator type="error">✗</StatusIndicator>
+                  <StatusIndicator type="error">No</StatusIndicator>
                 )}
               </FormField>
             )}
