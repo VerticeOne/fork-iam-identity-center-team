@@ -196,7 +196,10 @@ function Request(props) {
     relevantItems.map((data) => {
       data.accounts.map((account) => {
         if (account.id == accountId) {
-          permissionData = permissionData.concat(data.permissions);
+          // Enrich permissions with approvalRequired from parent eligibility entry
+          permissionData = permissionData.concat(
+            data.permissions.map(p => ({ ...p, approvalRequired: data.approvalRequired }))
+          );
         }
       });
     });
@@ -693,6 +696,7 @@ function Request(props) {
                   filteringType="auto"
                   empty="No eligible policies found"
                   options={policies.map((policy) => {
+                    const policyData = policyMap[policy.id];
                     const sortedAccounts = [...(policy.accounts || [])].sort((a, b) => {
                       const aIsProd = /prod/i.test(a.name);
                       const bIsProd = /prod/i.test(b.name);
@@ -702,17 +706,28 @@ function Request(props) {
                     const permNames = (policy.permissions || []).slice(0, 5).map(p => p.name).join(", ") || "None";
                     const moreAccounts = (policy.accounts?.length || 0) > 5 ? ` +${policy.accounts.length - 5} more` : "";
                     const morePerms = (policy.permissions?.length || 0) > 5 ? ` +${policy.permissions.length - 5} more` : "";
+                    const autoApprove = policyData?.approvalRequired === false ? "✓" : "✗";
+                    const approvalStatus = `Auto-approve: ${autoApprove}`;
 
                     return {
                       label: policy.id,
                       value: policy.id,
-                      description: `Accounts: ${accountNames}${moreAccounts} | Permissions: ${permNames}${morePerms}`,
+                      description: `${approvalStatus} | Accounts: ${accountNames}${moreAccounts} | Permissions: ${permNames}${morePerms}`,
                     };
                   })}
                   selectedOption={selectedPolicy}
                   onChange={({ detail }) => handlePolicySelect(detail.selectedOption)}
                   selectedAriaLabel="selected"
                 />
+              </FormField>
+            )}
+            {eligibilityType === EligibilityMode.POLICY_BASED && selectedPolicy && (
+              <FormField label="Auto-approve" stretch>
+                {policyMap[selectedPolicy.value]?.approvalRequired === false ? (
+                  <StatusIndicator type="success">✓</StatusIndicator>
+                ) : (
+                  <StatusIndicator type="error">✗</StatusIndicator>
+                )}
               </FormField>
             )}
             {(eligibilityType === EligibilityMode.LEGACY || (eligibilityType === EligibilityMode.POLICY_BASED && selectedPolicy)) && (
@@ -762,6 +777,10 @@ function Request(props) {
                   options={permissions.map((permission) => ({
                     label: permission.name,
                     value: permission.id,
+                    // In policy-based flow, approval status is already visible at policy level
+                    ...(eligibilityType === EligibilityMode.LEGACY && {
+                      description: permission.approvalRequired === false ? "✓ Auto-approved" : "⚠ Approval required",
+                    }),
                   }))}
                   selectedOption={role}
                   onChange={(event) => {
