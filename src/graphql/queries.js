@@ -180,12 +180,14 @@ export const requestByApproverAndStatus = /* GraphQL */ `
 export const requestByStatus = /* GraphQL */ `
   query RequestByStatus(
     $status: String!
+    $sortDirection: ModelSortDirection
     $filter: ModelrequestsFilterInput
     $limit: Int
     $nextToken: String
   ) {
     requestByStatus(
       status: $status
+      sortDirection: $sortDirection
       filter: $filter
       limit: $limit
       nextToken: $nextToken
