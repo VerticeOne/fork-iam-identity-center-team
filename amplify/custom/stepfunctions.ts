@@ -269,7 +269,7 @@ export function createStepFunctions(stack: Stack, env: string, functionTeamStatu
                     "TargetType": "AWS_ACCOUNT"
                 },
                 ResultPath: "$.revoke",
-                Retry: [{ ErrorEquals: ["SsoAdmin.ThrottlingException", "SsoAdmin.ConflictException", "ThrottlingException", "ServiceUnavailable", "InternalServerError"], IntervalSeconds: 3, MaxAttempts: 5, BackoffRate: 2 }],
+                Retry: [{ ErrorEquals: ["SsoAdmin.ConflictException", "ConflictException", "SsoAdmin.ThrottlingException", "ThrottlingException", "ServiceUnavailable", "InternalServerError"], IntervalSeconds: 3, MaxAttempts: 5, BackoffRate: 2 }],
                 Catch: [{ ErrorEquals: ["States.ALL"], Next: "Update Request Status", ResultPath: "$.statusError" }],
                 Next: "Notify Requester Session Ended"
             },
@@ -353,7 +353,7 @@ export function createStepFunctions(stack: Stack, env: string, functionTeamStatu
                     "TargetType": "AWS_ACCOUNT"
                 },
                 ResultPath: "$.grant",
-                Retry: [{ ErrorEquals: ["SsoAdmin.ThrottlingException", "SsoAdmin.ConflictException", "ThrottlingException", "ServiceUnavailable", "InternalServerError"], IntervalSeconds: 3, MaxAttempts: 5, BackoffRate: 2 }],
+                Retry: [{ ErrorEquals: ["SsoAdmin.ConflictException", "ConflictException", "SsoAdmin.ThrottlingException", "ThrottlingException", "ServiceUnavailable", "InternalServerError"], IntervalSeconds: 3, MaxAttempts: 5, BackoffRate: 2 }],
                 Catch: [{ ErrorEquals: ["States.ALL"], Next: "Update Request Status - in progress", ResultPath: "$.statusError" }],
                 Next: "Update Request Status - in progress"
             },
