@@ -177,6 +177,53 @@ export const requestByApproverAndStatus = /* GraphQL */ `
     }
   }
 `;
+export const requestByStatus = /* GraphQL */ `
+  query RequestByStatus(
+    $status: String!
+    $filter: ModelrequestsFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    requestByStatus(
+      status: $status
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        email
+        accountId
+        accountName
+        role
+        roleId
+        startTime
+        duration
+        justification
+        status
+        comment
+        username
+        approver
+        approverId
+        approvers
+        approver_ids
+        revoker
+        revokerId
+        endTime
+        ticketNo
+        revokeComment
+        session_duration
+        policyId
+        createdAt
+        updatedAt
+        owner
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
 export const getSessions = /* GraphQL */ `
   query GetSessions($id: ID!) {
     getSessions(id: $id) {

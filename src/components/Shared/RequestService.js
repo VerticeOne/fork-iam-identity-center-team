@@ -27,7 +27,8 @@ import {
   getUserPolicy,
   listPolicies,
   listPoliciesWithAccounts,
-  getPolicies
+  getPolicies,
+  requestByStatus
 } from "../../graphql/queries";
 import {
   createRequests,
@@ -219,6 +220,54 @@ export async function sessions(filter) {
   } catch (err) {
     console.log("error fetching sessions");
     return {"error":err}
+  }
+}
+
+export async function getPendingApprovals(user) {
+  let nextToken = null;
+  let data = [];
+  try {
+    do {
+      const request = await client.graphql({
+        query: requestByStatus,
+        variables: {
+          status: "pending",
+          filter: { and: [{ email: { ne: user } }, { approvers: { contains: user } }] },
+          nextToken
+        }
+      });
+      data = data.concat(request.data.requestByStatus.items);
+      nextToken = request.data.requestByStatus.nextToken;
+    } while (nextToken);
+    return data;
+  } catch (err) {
+    console.log("error fetching pending approvals");
+    return { error: err };
+  }
+}
+
+export async function getActiveSessions(user) {
+  let data = [];
+  // Query scheduled and in-progress sessions separately via GSI and merge
+  const userFilter = user
+    ? { or: [{ email: { eq: user } }, { approvers: { contains: user } }] }
+    : undefined;
+  try {
+    for (const status of ["scheduled", "in progress"]) {
+      let nextToken = null;
+      do {
+        const request = await client.graphql({
+          query: requestByStatus,
+          variables: { status, filter: userFilter, nextToken }
+        });
+        data = data.concat(request.data.requestByStatus.items);
+        nextToken = request.data.requestByStatus.nextToken;
+      } while (nextToken);
+    }
+    return data;
+  } catch (err) {
+    console.log("error fetching active sessions");
+    return { error: err };
   }
 }
 
