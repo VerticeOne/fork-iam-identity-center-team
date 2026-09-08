@@ -309,6 +309,17 @@ applicationSAMLAudience: urn:amazon:cognito:sp:<user-pool-id>
    - **Application SAML audience**: `applicationSAMLAudience` from step 6
 4. Save changes
 
+### Attribute mappings (GUI)
+
+In the application → **Attribute mappings**, set:
+
+| Application attribute | Identity Center attribute | Format |
+|---|---|---|
+| `Subject` | `${user:subject}` | `persistent` |
+| `Email` | `${user:email}` | `basic` |
+
+Save attribute mappings before proceeding to Step 8.
+
 ### Verify Start URL via CLI
 
 Only the Start URL can be verified via CLI:
