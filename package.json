@@ -72,6 +72,7 @@
     "@aws-amplify/storage": {
       "fast-xml-parser": "5.7.2"
     },
-    "fast-xml-builder": "1.2.0"
+    "fast-xml-builder": "1.2.0",
+    "axios": "^1.19.0"
   }
 }
