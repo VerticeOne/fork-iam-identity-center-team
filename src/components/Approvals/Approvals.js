@@ -26,7 +26,7 @@ import {
 } from "../../graphql/subscriptions";
 
 const client = generateClient();
-import { updateStatus, sessions, getRequest, getSetting } from "../Shared/RequestService";
+import { updateStatus, getPendingApprovals, getRequest, getSetting } from "../Shared/RequestService";
 import { useHistory } from "react-router-dom";
 import Status from "../Shared/Status";
 import "../../index.css";
@@ -236,10 +236,7 @@ function Approvals(props) {
   }, []);
 
   function views() {
-    let filter = {
-      and: [{ email: { ne: props.user } }, { status: { eq: "pending" } }, { approvers: { contains: props.user } }],
-    };
-    sessions(filter).then((items) => {
+    getPendingApprovals(props.user).then((items) => {
       items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
       setAllItems(items);
       setTableLoading(false);
@@ -252,10 +249,7 @@ function Approvals(props) {
 
   // Refresh data without resetting UI state (used by subscriptions)
   function refreshItems() {
-    let filter = {
-      and: [{ email: { ne: props.user } }, { status: { eq: "pending" } }, { approvers: { contains: props.user } }],
-    };
-    sessions(filter).then((items) => {
+    getPendingApprovals(props.user).then((items) => {
       items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
       setAllItems(items);
     });

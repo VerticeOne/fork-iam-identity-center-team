@@ -34,6 +34,10 @@ type requests
   duration: String!
   justification: String
   status: String
+    @index(
+      name: "byStatus"
+      queryField: "requestByStatus"
+    )
   @auth(
     rules: [
       { allow: groups, groups: ["Auditors"], operations: [read] }

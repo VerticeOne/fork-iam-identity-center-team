@@ -27,7 +27,8 @@ import {
   getUserPolicy,
   listPolicies,
   listPoliciesWithAccounts,
-  getPolicies
+  getPolicies,
+  requestByStatus
 } from "../../graphql/queries";
 import {
   createRequests,
@@ -220,6 +221,42 @@ export async function sessions(filter) {
     console.log("error fetching sessions");
     return {"error":err}
   }
+}
+
+export async function getRequestsByStatus(status, filter) {
+  const statuses = Array.isArray(status) ? status : [status];
+  let data = [];
+  try {
+    for (const s of statuses) {
+      let nextToken = null;
+      do {
+        const variables = { status: s, nextToken };
+        if (filter) variables.filter = filter;
+        const request = await client.graphql({
+          query: requestByStatus,
+          variables
+        });
+        data = data.concat(request.data.requestByStatus.items);
+        nextToken = request.data.requestByStatus.nextToken;
+      } while (nextToken);
+    }
+    return data;
+  } catch (err) {
+    console.log("error fetching requests by status", err);
+    return { error: err };
+  }
+}
+
+export async function getPendingApprovals(user) {
+  return getRequestsByStatus("pending", {
+    and: [{ email: { ne: user } }, { approvers: { contains: user } }],
+  });
+}
+
+export async function getActiveSessions(user) {
+  return getRequestsByStatus(["scheduled", "in progress"], {
+    or: [{ email: { eq: user } }, { approvers: { contains: user } }],
+  });
 }
 
 export async function fetchLogs(args) {

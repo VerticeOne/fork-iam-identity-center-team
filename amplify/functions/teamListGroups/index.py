@@ -37,6 +37,7 @@ def list_idc_group_membership(groupId):
         return all_groups
     except ClientError as e:
         print(e.response['Error']['Message'])
+        return []
 
 
 def handler(event, context):
