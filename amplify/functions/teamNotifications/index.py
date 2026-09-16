@@ -32,34 +32,70 @@ def parse_arn(arn):
     return result
 
 
+def _chunk_recipients(bulk, small, bulk_is_to):
+    """Chunk the bulk list into SES-sized batches, keeping the small list in the first batch only."""
+    SES_LIMIT = 50
+    max_first = SES_LIMIT - len(small)
+    first_batch = bulk[:max_first]
+    remaining = bulk[max_first:]
+
+    if bulk_is_to:
+        batches = [(first_batch, small)]
+        batches += [(remaining[i:i + SES_LIMIT], []) for i in range(0, len(remaining), SES_LIMIT)]
+    else:
+        batches = [(small, first_batch)]
+        # Subsequent batches: move CC recipients to To (ToAddresses cannot be empty)
+        batches += [(remaining[i:i + SES_LIMIT], []) for i in range(0, len(remaining), SES_LIMIT)]
+
+    return batches
+
+
+def _chunks_email_to_addresses(to_addresses, cc_addresses):
+    """Split To and CC into batches respecting the SES 50-recipient limit.
+
+    One of To/CC is always a single address, the other is the bulk list.
+    The single address is included only in the first batch to avoid duplicate
+    delivery. Subsequent batches move remaining recipients into To (ToAddresses
+    cannot be empty in SES SendEmail).
+    """
+    SES_LIMIT = 50
+
+    if len(to_addresses) >= len(cc_addresses):
+        bulk, small, bulk_is_to = to_addresses, cc_addresses, True
+    else:
+        bulk, small, bulk_is_to = cc_addresses, to_addresses, False
+
+    if len(small) >= SES_LIMIT:
+        print(f"Warning: small recipient list ({len(small)}) exceeds SES limit, sending all as To")
+        all_recipients = list(to_addresses) + list(cc_addresses)
+        return [(all_recipients[i:i + SES_LIMIT], []) for i in range(0, len(all_recipients), SES_LIMIT)]
+
+    return _chunk_recipients(bulk, small, bulk_is_to)
+
+
 def send_ses_notification(
     source_email, source_arn, subject, message_html, to_addresses, cc_addresses
 ):
     try:
-        # Providing a source arn enables using an SES identity in another account
-        if source_arn:
-            ses_region = parse_arn(source_arn)["region"]
-            ses_client = session.client("ses", region_name=ses_region)
+        ses_client = (
+            session.client("ses", region_name=parse_arn(source_arn)["region"])
+            if source_arn
+            else session.client("ses")
+        )
 
-            ses_client.send_email(
-                Source=source_email,
-                SourceArn=source_arn,
-                Destination={"ToAddresses": to_addresses, "CcAddresses": cc_addresses},
-                Message={
+        for to_batch, cc_batch in _chunks_email_to_addresses(to_addresses, cc_addresses):
+            kwargs = {
+                "Source": source_email,
+                "Destination": {"ToAddresses": to_batch, "CcAddresses": cc_batch},
+                "Message": {
                     "Subject": {"Data": subject, "Charset": "UTF-8"},
                     "Body": {"Html": {"Data": message_html, "Charset": "UTF-8"}},
                 },
-            )
-        else:
-            ses_client = session.client("ses")
-            ses_client.send_email(
-                Source=source_email,
-                Destination={"ToAddresses": to_addresses, "CcAddresses": cc_addresses},
-                Message={
-                    "Subject": {"Data": subject, "Charset": "UTF-8"},
-                    "Body": {"Html": {"Data": message_html, "Charset": "UTF-8"}},
-                },
-            )
+            }
+            if source_arn:
+                kwargs["SourceArn"] = source_arn
+            ses_client.send_email(**kwargs)
+
     except Exception as e:
         print(f"Error sending email via SES: {e}")
 
