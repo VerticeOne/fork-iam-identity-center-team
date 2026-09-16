@@ -8,7 +8,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [create, read] }
       { allow: owner, ownerField: "approver_ids", operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   ) {
   id: ID!
@@ -23,7 +22,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read]}
       { allow: owner, ownerField: "approver_ids", operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   accountId: String!
@@ -43,7 +41,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [create, read, update] }
       { allow: owner, ownerField: "approver_ids", operations: [update, read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   comment: String
@@ -52,7 +49,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read] }
       { allow: owner, ownerField: "approver_ids", operations: [update, read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   username: String
@@ -62,7 +58,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read]}
       { allow: owner, ownerField: "approver_ids", operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   approverId: String
@@ -76,7 +71,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read]}
       { allow: owner, ownerField: "approver_ids", operations: [update,read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   approvers: [String]
@@ -85,7 +79,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read]}
       { allow: owner, ownerField: "approver_ids", operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   approver_ids: [String]
@@ -94,7 +87,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read]}
       { allow: owner, ownerField: "approver_ids", operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   revoker: String
@@ -104,7 +96,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [read, update]}
       { allow: owner, ownerField: "approver_ids", operations: [update,read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   )
   endTime: AWSDateTime
@@ -115,7 +106,6 @@ type requests
       { allow: groups, groups: ["Auditors"], operations: [read] }
       { allow: owner, operations: [update,read]}
       { allow: owner, ownerField: "approver_ids", operations: [update,read] }
-      { allow: private, provider: iam, operations: [read,update] }
     ]
   )
   session_duration: String
@@ -129,7 +119,6 @@ type sessions
       { allow: owner }
       { allow: owner, ownerField: "username"}
       { allow: owner, ownerField: "approver_ids"}
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   ) {
   id: String!
@@ -149,7 +138,6 @@ type Approvers
       { allow: groups, groups: ["Admin"] }
       { allow: groups, groupClaim: "scope", groups: ["api/admin"] }
       { allow: private, operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   ) {
   id: ID
@@ -167,7 +155,6 @@ type Settings
       { allow: groups, groups: ["Admin"] }
       { allow: groups, groupClaim: "scope", groups: ["api/admin"] }
       { allow: private, operations: [read] }
-      { allow: private, provider: iam, operations: [read] }
     ]
   ) {
   id: String
@@ -184,6 +171,12 @@ type Settings
   sesSourceEmail: String
   sesSourceArn: String
   slackToken: String
+    @auth(
+      rules: [
+        { allow: groups, groups: ["Admin"] }
+        { allow: groups, groupClaim: "scope", groups: ["api/admin"] }
+      ]
+    )
   teamAdminGroup: String
   teamAuditorGroup: String
   allowLegacyEligibility: Boolean
@@ -213,7 +206,6 @@ type Eligibility
       { allow: groups, groups: ["Admin"] }
       { allow: groups, groupClaim: "scope", groups: ["api/admin"] }
       { allow: private, operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   ) {
   id: ID
@@ -235,7 +227,6 @@ type Policies
       { allow: groups, groups: ["Admin"] }
       { allow: groups, groupClaim: "scope", groups: ["api/admin"] }
       { allow: private, operations: [read] }
-      { allow: private, provider: iam, operations: [read, update] }
     ]
   ) {
   id: ID!
@@ -249,11 +240,10 @@ type Policies
 }
 type OUAccountsCache
   @model(subscriptions: null, queries: null, mutations: null)
-  @auth(
-    rules: [
-      { allow: private, provider: iam, operations: [create, read, update, delete] }
-    ]
-  ) {
+  # No @auth rules: all queries, mutations and subscriptions are null so no resolvers
+  # are generated and there is nothing to authorize. The table is read and written
+  # directly via the DynamoDB SDK by teamgetOUAccounts and teaminvalidateOUCache.
+  @auth(rules: [{ allow: groups, groups: ["Admin"] }]) {
   ou_id: ID! @primaryKey
   accounts: AWSJSON
   cached_at: AWSTimestamp
@@ -397,11 +387,11 @@ input PermissionsInput {
 
 type Mutation {
   publishPolicy(result: PolicyInput): Policy
-  @auth(rules: [{ allow: private, provider: iam} { allow: private }])
+  @auth(rules: [{ allow: private }])
   publishOUs(result: OUsInput): OUs
-  @auth(rules: [{ allow: private, provider: iam} { allow: private }])
+  @auth(rules: [{ allow: private }])
   publishPermissions(result: PermissionInput): Permission
-  @auth(rules: [{ allow: private, provider: iam} { allow: private }])
+  @auth(rules: [{ allow: private }])
   invalidateOUCache(ouIds: [String]!): InvalidateCacheResult
   @function(name: "teaminvalidateOUCache-${appIdLower}-${branchName}")
   @auth(rules: [{ allow: groups, groups: ["Admin"] }])
@@ -470,7 +460,6 @@ type Query {
     @function(name: "teamgetUserPolicy-${appIdLower}-${branchName}")
     @auth(
     rules: [
-      { allow: private, provider: iam}
       { allow: private }
       ])
   listGroups(
@@ -485,7 +474,7 @@ type Query {
     ouIds: [String]!
   ): OUAccountsBatch
     @function(name: "teamgetOUAccounts-${appIdLower}-${branchName}")
-    @auth(rules: [{ allow: private, provider: iam} { allow: private }])
+    @auth(rules: [{ allow: private }])
   listPoliciesWithAccounts: [PolicyWithResolvedAccounts]
     @function(name: "teamListPoliciesWithAccounts-${appIdLower}-${branchName}")
     @auth(rules: [{ allow: private }])
