@@ -465,13 +465,39 @@ def get_ou(id):
     except ClientError as e:
         print(e.response['Error']['Message'])
 
-async def getPsDuration(ps):
+def get_account_name(accountId):
+    """Return the authoritative account name from AWS Organizations.
+
+    The accountName supplied by the client is display-only and is not verified
+    against accountId, so it must not be trusted.
+    """
+    client = boto3.client('organizations')
+    try:
+        response = client.describe_account(AccountId=accountId)
+        return response['Account']['Name']
+    except ClientError as e:
+        print("Unable to derive account name for %s: %s" %
+              (accountId, e.response['Error']['Message']))
+        return None
+
+
+async def getPsDetails(ps):
+    """Return the authoritative permission set details (Name, SessionDuration).
+
+    The role name supplied by the client is display-only and is not verified
+    against roleId, so it must not be trusted.
+    """
     client = boto3.client('sso-admin')
-    response = client.describe_permission_set(
-    InstanceArn=sso_instance['InstanceArn'],
-    PermissionSetArn=ps
-    )
-    return response['PermissionSet']['SessionDuration']
+    try:
+        response = client.describe_permission_set(
+            InstanceArn=sso_instance['InstanceArn'],
+            PermissionSetArn=ps
+        )
+        return response['PermissionSet']
+    except ClientError as e:
+        print("Unable to derive permission set details for %s: %s" %
+              (ps, e.response['Error']['Message']))
+        return {}
 
 def list_approvers(ids):
     try:
@@ -546,16 +572,30 @@ async def updateRequestDetails(request_id, username, accountId, roleId, policy_b
     approver_details = await get_approvers_details(accountId, policy_based.get("approverGroupIds", None))
     approver_ids = approver_details["approver_ids"]
     approvers = approver_details["approvers"]
-    session_duration = policy_based.get("duration") or await getPsDuration(roleId)
-    
+    permission_set = await getPsDetails(roleId)
+    session_duration = policy_based.get("duration") or permission_set.get('SessionDuration')
+
     input = {
         'id': request_id,
         'email': email,
         'approvers': approvers,
         'approver_ids': approver_ids,
-        'session_duration': session_duration        
+        'session_duration': session_duration
     }
-    
+
+    # accountName and role are client-supplied display values that the API does
+    # not verify against accountId/roleId. Overwrite them with the authoritative
+    # values so approvers, notifications and the audit trail cannot be spoofed.
+    # This runs before the approval workflow is invoked, so approvers only ever
+    # see the derived values.
+    account_name = get_account_name(accountId)
+    if account_name:
+        input['accountName'] = account_name
+
+    role_name = permission_set.get('Name')
+    if role_name:
+        input['role'] = role_name
+
     updateRequest(input)
 
 def updateApproverDetails(request_id,username):
