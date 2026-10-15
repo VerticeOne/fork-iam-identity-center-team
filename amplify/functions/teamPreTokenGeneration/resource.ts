@@ -39,6 +39,7 @@ export function createTeamPreTokenGeneration(props: TeamPreTokenGenerationProps)
     fn.addToRolePolicy(new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
+            'identitystore:DescribeUser',
             'identitystore:GetUserId',
             'identitystore:GetGroupId',
             'identitystore:ListGroupMembershipsForMember',
