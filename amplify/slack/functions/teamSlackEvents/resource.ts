@@ -12,7 +12,7 @@ export interface TeamSlackEventsProps {
   stack: Stack;
   env: string;
   slackLayer: lambda.ILayerVersion;
-  secretArn: string;
+  secretParameterArn: string;
   slackTeamId: string;
   slackAllowedUserIds: string;
   workerFunctionName: string;
@@ -47,7 +47,7 @@ export function createTeamSlackEvents(props: TeamSlackEventsProps): lambda.Funct
     environment: {
       ENV: env,
       REGION: stack.region,
-      SLACK_SECRET_ARN: props.secretArn,
+      SLACK_SECRET_PARAMETER_ARN: props.secretParameterArn,
       SLACK_TEAM_ID: props.slackTeamId,
       SLACK_ALLOWED_USER_IDS: props.slackAllowedUserIds,
       WORKER_FUNCTION_NAME: props.workerFunctionName,

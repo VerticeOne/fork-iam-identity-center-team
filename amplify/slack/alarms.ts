@@ -172,7 +172,7 @@ export function createSlackAlarms(props: SlackAlarmsProps): void {
     metric: eventsFunction.metricDuration({ statistic: 'p99', period: PERIOD }),
     threshold: EVENTS_DURATION_P99_THRESHOLD_MS,
     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-    alarmDescription: `Events Lambda p99 duration above ${EVENTS_DURATION_P99_THRESHOLD_MS} ms; Slack requires an answer within 3 s. Check cold starts and the Secrets Manager and worker invoke calls first.`,
+    alarmDescription: `Events Lambda p99 duration above ${EVENTS_DURATION_P99_THRESHOLD_MS} ms; Slack requires an answer within 3 s. Check cold starts and the SSM and worker invoke calls first.`,
   });
 
   // Rejected Slack signatures, counted from the events Lambda JSON logs
@@ -195,7 +195,7 @@ export function createSlackAlarms(props: SlackAlarmsProps): void {
     }),
     threshold: INVALID_SIGNATURES_THRESHOLD,
     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-    alarmDescription: 'Many rejected Slack signatures: forged requests or a wrong signing secret after rotation. Check the signing secret in Secrets Manager first.',
+    alarmDescription: 'Many rejected Slack signatures: forged requests or a wrong signing secret after rotation. Check the signing secret in the SSM parameter first.',
   });
 
   // Fail the build on typos in SLACK_ALARM_TAG_OVERRIDES

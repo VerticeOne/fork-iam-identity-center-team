@@ -3,7 +3,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
-import { appIdLower } from '../config';
+import { appIdLower, slackApiThrottleBurstLimit, slackApiThrottleRateLimit } from '../config';
 
 const STAGE_NAME = 'v1';
 
@@ -59,8 +59,8 @@ export function createSlackApi(props: SlackApiProps): SlackApiOutput {
     cloudWatchRole: false,
     deployOptions: {
       stageName: STAGE_NAME,
-      throttlingRateLimit: 10,
-      throttlingBurstLimit: 20,
+      throttlingRateLimit: slackApiThrottleRateLimit,
+      throttlingBurstLimit: slackApiThrottleBurstLimit,
       metricsEnabled: true,
       loggingLevel: apigateway.MethodLoggingLevel.OFF,
       // Slack payloads contain user data, never log request bodies

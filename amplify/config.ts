@@ -35,8 +35,9 @@ export const appSyncWafArn = process.env.APPSYNC_WAF_WEB_ACL_ARN;
 export const idcIdentityProviderName = 'IDC';
 
 // Slack integration (optional, passed from Terraform)
-// SLACK_SECRET_ARN enables the whole Slack integration stack
-export const slackSecretArn = process.env.SLACK_SECRET_ARN;
+// ARN of the SSM SecureString parameter with the Slack app credentials JSON {signing_secret, bot_token}
+// (passed from Terraform). Setting it enables the whole Slack integration stack.
+export const slackSecretParameterArn = process.env.SLACK_SECRET_PARAMETER_ARN;
 export const slackApiWafArn = process.env.SLACK_API_WAF_WEB_ACL_ARN;
 export const slackTeamId = process.env.SLACK_TEAM_ID ?? '';
 // Comma-separated Slack user IDs allowed to use the integration; empty = everyone
@@ -50,7 +51,7 @@ export const slackTokenKeyRotationDays = parseInt(process.env.SLACK_TOKEN_KEY_RO
 
 // Optional customer managed KMS key for Slack DynamoDB tables (default: AWS managed)
 export const slackDynamoDbKmsKeyArn = process.env.SLACK_DYNAMODB_KMS_KEY_ARN;
-// Optional customer managed KMS key used by Terraform to encrypt the Slack secret (default: aws/secretsmanager)
+// Optional customer managed KMS key used to encrypt the SSM parameter with the Slack credentials (default: aws/ssm)
 export const slackSecretKmsKeyArn = process.env.SLACK_SECRET_KMS_KEY_ARN;
 
 // SSM parameter holding the ARN of the SNS topic for CloudWatch alarms (optional; without it alarms have no actions)
@@ -100,10 +101,26 @@ export const slackAlarmTagOverrides = parseAlarmTagOverrides(process.env.SLACK_A
 export const slackAlarmMinErrors = parseInt(process.env.SLACK_ALARM_MIN_ERRORS ?? '3', 10);
 export const slackAlarmMaxErrorRatePercent = parseFloat(process.env.SLACK_ALARM_MAX_ERROR_RATE_PERCENT ?? '5');
 
+// Slack API Gateway stage throttling (requests per second / burst)
+export const slackApiThrottleRateLimit = parseInt(process.env.SLACK_API_THROTTLE_RATE_LIMIT ?? '20', 10);
+export const slackApiThrottleBurstLimit = parseInt(process.env.SLACK_API_THROTTLE_BURST_LIMIT ?? '40', 10);
+
 // Validate Slack settings only when the integration is enabled (Cognito limits apply)
-if (slackSecretArn) {
+if (slackSecretParameterArn) {
+    if (!/^arn:aws[a-z-]*:ssm:[a-z0-9-]+:\d{12}:parameter\/.+/.test(slackSecretParameterArn)) {
+        throw new Error('SLACK_SECRET_PARAMETER_ARN must be an SSM parameter ARN (arn:aws:ssm:<region>:<account>:parameter/...)');
+    }
     if (!slackTeamId) {
-        throw new Error('SLACK_TEAM_ID must be set when SLACK_SECRET_ARN is set');
+        throw new Error('SLACK_TEAM_ID must be set when SLACK_SECRET_PARAMETER_ARN is set');
+    }
+    if (!Number.isInteger(slackApiThrottleRateLimit) || slackApiThrottleRateLimit < 1) {
+        throw new Error('SLACK_API_THROTTLE_RATE_LIMIT must be an integer >= 1');
+    }
+    if (!Number.isInteger(slackApiThrottleBurstLimit) || slackApiThrottleBurstLimit < 1) {
+        throw new Error('SLACK_API_THROTTLE_BURST_LIMIT must be an integer >= 1');
+    }
+    if (slackApiThrottleBurstLimit < slackApiThrottleRateLimit) {
+        throw new Error('SLACK_API_THROTTLE_BURST_LIMIT must be >= SLACK_API_THROTTLE_RATE_LIMIT');
     }
     if (!Number.isInteger(slackAccessTokenValidityMinutes) || slackAccessTokenValidityMinutes < 5 || slackAccessTokenValidityMinutes > 1440) {
         throw new Error('SLACK_ACCESS_TOKEN_VALIDITY_MINUTES must be an integer between 5 and 1440');

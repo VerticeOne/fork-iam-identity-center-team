@@ -12,7 +12,7 @@ export interface TeamSlackWorkerProps {
   stack: Stack;
   env: string;
   slackLayer: lambda.ILayerVersion;
-  secretArn: string;
+  secretParameterArn: string;
   slackTeamId: string;
   graphqlUrl: string;
   userPoolId: string;
@@ -50,7 +50,7 @@ export function createTeamSlackWorker(props: TeamSlackWorkerProps): lambda.Funct
     environment: {
       ENV: env,
       REGION: stack.region,
-      SLACK_SECRET_ARN: props.secretArn,
+      SLACK_SECRET_PARAMETER_ARN: props.secretParameterArn,
       SLACK_TEAM_ID: props.slackTeamId,
       // Used as identity_provider in the account linking URL (skips the Cognito IdP selection)
       IDENTITY_PROVIDER_NAME: idcIdentityProviderName,

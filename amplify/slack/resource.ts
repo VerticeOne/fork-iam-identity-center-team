@@ -5,7 +5,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { slackAllowedUserIds, slackTeamId } from '../config';
 import { createSlackAlarms } from './alarms';
 import { addSlackApiRoutes, createSlackApi } from './api';
@@ -20,7 +19,7 @@ export interface SlackIntegrationProps {
   stack: Stack;
   env: string;
   wafArn?: string;
-  secretArn: string;
+  secretParameterArn: string;
   userPool: cognito.IUserPool;
   cognitoBaseUrl: string;
   graphqlUrl: string;
@@ -48,23 +47,23 @@ export interface SlackIntegrationOutput {
  * @param props.stack - Dedicated CDK Stack for the Slack integration
  * @param props.env - Environment name (e.g., 'sandbox', 'prod')
  * @param props.wafArn - Optional WAF WebACL ARN for the Slack API
- * @param props.secretArn - ARN of the Slack secret in Secrets Manager
+ * @param props.secretParameterArn - ARN of the SSM SecureString parameter with the Slack credentials JSON
  * @param props.userPool - Existing TEAM Cognito user pool
  * @param props.cognitoBaseUrl - Base URL of the user pool domain (https://<prefix>.auth.<region>.amazoncognito.com)
  * @param props.graphqlUrl - AppSync GraphQL endpoint URL
  * @param props.dynamoDbKmsKeyArn - Optional customer managed KMS key for the tables
- * @param props.secretKmsKeyArn - Optional customer managed KMS key encrypting the Slack secret
+ * @param props.secretKmsKeyArn - Optional customer managed KMS key encrypting the SSM parameter (default: aws/ssm)
  * @returns Slack integration resources
  */
 export function createSlackIntegration(props: SlackIntegrationProps): SlackIntegrationOutput {
-  const { stack, env, wafArn, secretArn, userPool, cognitoBaseUrl, graphqlUrl, dynamoDbKmsKeyArn, secretKmsKeyArn } = props;
+  const { stack, env, wafArn, secretParameterArn, userPool, cognitoBaseUrl, graphqlUrl, dynamoDbKmsKeyArn, secretKmsKeyArn } = props;
 
   const { tokenKey, linkStateTable, userLinksTable } = createSlackTables({ stack, env, dynamoDbKmsKeyArn });
   const slackLayer = createSlackPythonLayer({ stack, env });
   const { api, eventsResource, callbackResource, callbackUrl } = createSlackApi({ stack, env, wafArn });
   const slackClient = createSlackClient({ stack, env, userPool, callbackUrl });
 
-  const common = { stack, env, slackLayer, secretArn, slackTeamId };
+  const common = { stack, env, slackLayer, secretParameterArn, slackTeamId };
   const linking = {
     userPoolId: userPool.userPoolId,
     slackClientId: slackClient.userPoolClientId,
@@ -83,13 +82,21 @@ export function createSlackIntegration(props: SlackIntegrationProps): SlackInteg
   });
   const callbackFunction = createTeamSlackOAuthCallback({ ...common, ...linking });
 
-  // Slack secret (signing secret, bot token): readable by all three Lambdas.
-  // With a customer managed key, grantRead also adds kms:Decrypt restricted to Secrets Manager (ViaService).
-  const slackSecret = secretsmanager.Secret.fromSecretAttributes(stack, 'SlackSecret', {
-    secretCompleteArn: secretArn,
-    encryptionKey: secretKmsKeyArn ? kms.Key.fromKeyArn(stack, 'SlackSecretKey', secretKmsKeyArn) : undefined,
+  // Slack app credentials (signing secret, bot token): readable by all three Lambdas
+  [eventsFunction, workerFunction, callbackFunction].forEach(fn => {
+    fn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameter'],
+      resources: [secretParameterArn],
+    }));
+    // With the AWS managed aws/ssm key no KMS permission is needed; a customer managed key needs kms:Decrypt
+    if (secretKmsKeyArn) {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['kms:Decrypt'],
+        resources: [secretKmsKeyArn],
+        conditions: { StringEquals: { 'kms:ViaService': `ssm.${stack.region}.amazonaws.com` } },
+      }));
+    }
   });
-  [eventsFunction, workerFunction, callbackFunction].forEach(fn => slackSecret.grantRead(fn));
 
   // Events only hands work to the worker; no table, KMS or Cognito access
   workerFunction.grantInvoke(eventsFunction);

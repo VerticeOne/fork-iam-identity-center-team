@@ -32,7 +32,7 @@ import { createTeamDeleteApproverGroups } from './functions/teamDeleteApproverGr
 import { createTeamDeletePolicies } from './functions/teamDeletePolicies/resource';
 
 // Shared configuration
-import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled, appSyncWafArn, slackSecretArn, slackApiWafArn, slackDynamoDbKmsKeyArn, slackSecretKmsKeyArn } from './config';
+import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled, appSyncWafArn, slackSecretParameterArn, slackApiWafArn, slackDynamoDbKmsKeyArn, slackSecretKmsKeyArn } from './config';
 
 // Aspects
 import { S3BucketVersioning } from './aspects/s3Versioning';
@@ -191,8 +191,8 @@ if (appSyncWafArn) {
     });
 }
 
-// Slack integration in a separate stack (enabled only when SLACK_SECRET_ARN is set)
-if (slackSecretArn) {
+// Slack integration in a separate stack (enabled only when SLACK_SECRET_PARAMETER_ARN is set)
+if (slackSecretParameterArn) {
     const slackStack = backend.createStack('slackIntegration');
     // Domain created in auth/resource.ts (applyEscapeHatches); findChild fails at synth if it is renamed
     const cognitoDomain = backend.auth.resources.userPool.node.findChild('TeamAuthDomain') as cognito.UserPoolDomain;
@@ -200,7 +200,7 @@ if (slackSecretArn) {
         stack: slackStack,
         env: branchName,
         wafArn: slackApiWafArn,
-        secretArn: slackSecretArn,
+        secretParameterArn: slackSecretParameterArn,
         userPool: backend.auth.resources.userPool,
         cognitoBaseUrl: cognitoDomain.baseUrl(),
         graphqlUrl: backend.data.graphqlUrl,

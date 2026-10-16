@@ -12,7 +12,7 @@ export interface TeamSlackOAuthCallbackProps {
   stack: Stack;
   env: string;
   slackLayer: lambda.ILayerVersion;
-  secretArn: string;
+  secretParameterArn: string;
   slackTeamId: string;
   userPoolId: string;
   slackClientId: string;
@@ -49,7 +49,7 @@ export function createTeamSlackOAuthCallback(props: TeamSlackOAuthCallbackProps)
     environment: {
       ENV: env,
       REGION: stack.region,
-      SLACK_SECRET_ARN: props.secretArn,
+      SLACK_SECRET_PARAMETER_ARN: props.secretParameterArn,
       SLACK_TEAM_ID: props.slackTeamId,
       USER_POOL_ID: props.userPoolId,
       SLACK_CLIENT_ID: props.slackClientId,
