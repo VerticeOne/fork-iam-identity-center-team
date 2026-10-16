@@ -1,5 +1,6 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { Aspects, Tags, CfnOutput } from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
@@ -20,6 +21,7 @@ import * as teamqueryLogsResource from './functions/teamqueryLogs/resource';
 import { createSnsTopic } from './custom/sns';
 import { createStepFunctions } from './custom/stepfunctions';
 import { cloudTrailLake } from './custom/cloudtrailLake';
+import { createSlackIntegration } from './slack/resource';
 
 // Python functions
 import { createTeamNotifications } from './functions/teamNotifications/resource';
@@ -30,7 +32,7 @@ import { createTeamDeleteApproverGroups } from './functions/teamDeleteApproverGr
 import { createTeamDeletePolicies } from './functions/teamDeletePolicies/resource';
 
 // Shared configuration
-import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled, appSyncWafArn } from './config';
+import { branchName, settingsTableSsmPath, appUrl, cacheTtl, prewarmIntervalDays, s3VersioningEnabled, dynamoDbPitrEnabled, appSyncWafArn, slackSecretArn, slackApiWafArn, slackDynamoDbKmsKeyArn, slackSecretKmsKeyArn } from './config';
 
 // Aspects
 import { S3BucketVersioning } from './aspects/s3Versioning';
@@ -187,6 +189,27 @@ if (appSyncWafArn) {
         resourceArn: backend.data.resources.cfnResources.cfnGraphqlApi.attrArn,
         webAclArn: appSyncWafArn,
     });
+}
+
+// Slack integration in a separate stack (enabled only when SLACK_SECRET_ARN is set)
+if (slackSecretArn) {
+    const slackStack = backend.createStack('slackIntegration');
+    // Domain created in auth/resource.ts (applyEscapeHatches); findChild fails at synth if it is renamed
+    const cognitoDomain = backend.auth.resources.userPool.node.findChild('TeamAuthDomain') as cognito.UserPoolDomain;
+    createSlackIntegration({
+        stack: slackStack,
+        env: branchName,
+        wafArn: slackApiWafArn,
+        secretArn: slackSecretArn,
+        userPool: backend.auth.resources.userPool,
+        cognitoBaseUrl: cognitoDomain.baseUrl(),
+        graphqlUrl: backend.data.graphqlUrl,
+        // Imported keys must have a key policy delegating to IAM (account root)
+        // so the IAM grants created by this stack take effect
+        dynamoDbKmsKeyArn: slackDynamoDbKmsKeyArn,
+        secretKmsKeyArn: slackSecretKmsKeyArn,
+    });
+    Tags.of(slackStack).add('Application', 'TEAM-IDC');
 }
 
 // Tag all resources
